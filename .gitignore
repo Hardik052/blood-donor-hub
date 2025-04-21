@@ -1,0 +1,20 @@
+# Client (Frontend)
+client/node_modules/
+client/package-lock.json
+client/build/
+client/dist/
+client/.env
+client/public/tailwind.css
+
+# Server (Backend)
+server/node_modules/
+server/package-lock.json
+server/.env
+
+# General
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
