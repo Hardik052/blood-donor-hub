@@ -4,13 +4,14 @@ client/package-lock.json
 client/build/
 client/dist/
 client/.env
-api/.env
 client/public/tailwind.css
 
 # Server (Backend)
-api/node_modules
+api/node_modules/
 api/package-lock.json
 api/.env
+api/blood-service.json
+api/*.json
 
 # General
 .vscode/
