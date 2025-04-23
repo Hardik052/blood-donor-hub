@@ -1,16 +1,16 @@
 # Client (Frontend)
-# client/node_modules/
-# client/package-lock.json
-# client/build/
-# client/dist/
-# client/.env
-# api/.env
-# client/public/tailwind.css
+client/node_modules/
+client/package-lock.json
+client/build/
+client/dist/
+client/.env
+api/.env
+client/public/tailwind.css
 
 # Server (Backend)
-server/node_modules/
-server/package-lock.json
-server/.env
+api/node_modules
+api/package-lock.json
+api/.env
 
 # General
 .vscode/
