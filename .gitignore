@@ -4,6 +4,7 @@ client/package-lock.json
 client/build/
 client/dist/
 client/.env
+api/.env
 client/public/tailwind.css
 
 # Server (Backend)
