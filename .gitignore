@@ -1,11 +1,11 @@
 # Client (Frontend)
-client/node_modules/
-client/package-lock.json
-client/build/
-client/dist/
-client/.env
-api/.env
-client/public/tailwind.css
+# client/node_modules/
+# client/package-lock.json
+# client/build/
+# client/dist/
+# client/.env
+# api/.env
+# client/public/tailwind.css
 
 # Server (Backend)
 server/node_modules/
