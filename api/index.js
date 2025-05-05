@@ -195,15 +195,40 @@ app.get("/api/students", verifyToken, async (req, res) => {
 app.get("/api/bloodgroup/:bloodGroup", verifyToken, async (req, res) => {
   try {
     const { bloodGroup } = req.params;
-    const students = await Student.find({ bloodGroup });
-    if (students.length === 0) {
-      return res.status(404).json({ message: `No students found with blood group ${bloodGroup}` });
+
+    // Blood group compatibility map (recipient => acceptable donors)
+    const compatibleDonors = {
+      "A+": ["A+", "A-", "O+", "O-"],
+      "A-": ["A-", "O-"],
+      "B+": ["B+", "B-", "O+", "O-"],
+      "B-": ["B-", "O-"],
+      "AB+": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"], // Universal recipient
+      "AB-": ["A-", "B-", "AB-", "O-"],
+      "O+": ["O+", "O-"],
+      "O-": ["O-"], // Universal donor
+    };
+
+    const allowedTypes = compatibleDonors[bloodGroup];
+
+    if (!allowedTypes) {
+      return res.status(400).json({ message: `Invalid blood group: ${bloodGroup}` });
     }
+
+    // Find students with compatible blood types
+    const students = await Student.find({ bloodGroup: { $in: allowedTypes } });
+
+    if (students.length === 0) {
+      return res
+        .status(404)
+        .json({ message: `No compatible donors found for blood group ${bloodGroup}` });
+    }
+
     res.json(students);
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
 });
+
 
 app.get("/api/students/:id", verifyToken, async (req, res) => {
   try {
