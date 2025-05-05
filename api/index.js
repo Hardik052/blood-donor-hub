@@ -166,7 +166,17 @@ app.post("/api/add-admin", verifyToken, restrictToAdmin, async (req, res) => {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    // Prepare confirmation email
+    // Create the admin
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({
+      email,
+      password: hashedPassword,
+      role: "admin",
+      isVerified: true,
+    });
+    await user.save();
+
+    // Send confirmation email
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
@@ -184,27 +194,14 @@ app.post("/api/add-admin", verifyToken, restrictToAdmin, async (req, res) => {
       `,
     };
 
-    // Attempt to send confirmation email first
     try {
       await transporter.sendMail(mailOptions);
     } catch (emailError) {
-      // Check if the error indicates an invalid email address
-      if (emailError.responseCode === 550 || emailError.message.includes("recipient rejected")) {
-        return res.status(400).json({ message: "Email does not exist" });
-      }
-      console.error("Failed to send confirmation email:", emailError);
-      return res.status(500).json({ message: "Failed to send confirmation email", error: emailError.message });
+      console.error("Failed to send admin confirmation email:", emailError);
+      return res.status(201).json({
+        message: "Admin created successfully, but failed to send confirmation email",
+      });
     }
-
-    // If email is sent successfully, create the admin
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({
-      email,
-      password: hashedPassword,
-      role: "admin",
-      isVerified: true,
-    });
-    await user.save();
 
     res.status(201).json({ message: "Admin created successfully and confirmation email sent" });
   } catch (error) {
@@ -286,7 +283,11 @@ app.post("/api/students", verifyToken, restrictToAdmin, async (req, res) => {
       return res.status(400).json({ message: "Email already exists in student records" });
     }
 
-    // Prepare confirmation email
+    // Save the student
+    const newStudent = new Student({ name, email, bloodGroup, trade });
+    await newStudent.save();
+
+    // Send confirmation email
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
@@ -306,21 +307,15 @@ app.post("/api/students", verifyToken, restrictToAdmin, async (req, res) => {
       `,
     };
 
-    // Attempt to send confirmation email first
     try {
       await transporter.sendMail(mailOptions);
     } catch (emailError) {
-      // Check if the error indicates an invalid email address
-      if (emailError.responseCode === 550 || emailError.message.includes("recipient rejected")) {
-        return res.status(400).json({ message: "Email does not exist" });
-      }
-      console.error("Failed to send confirmation email:", emailError);
-      return res.status(500).json({ message: "Failed to send confirmation email", error: emailError.message });
+      console.error("Failed to send student confirmation email:", emailError);
+      return res.status(201).json({
+        message: "Student added successfully, but failed to send confirmation email",
+        student: newStudent,
+      });
     }
-
-    // If email is sent successfully, save the student
-    const newStudent = new Student({ name, email, bloodGroup, trade });
-    await newStudent.save();
 
     res.status(201).json({ message: "Student added successfully and confirmation email sent", student: newStudent });
   } catch (error) {
@@ -372,14 +367,37 @@ app.post("/api/request-blood", verifyToken, async (req, res) => {
     if (!bloodGroup) {
       return res.status(400).json({ message: "Blood group is required" });
     }
-    const donors = await Student.find({ bloodGroup });
-    if (donors.length === 0) {
-      return res.status(404).json({ message: `No donors found for blood group ${bloodGroup}` });
+
+    // Blood group compatibility map (recipient => acceptable donors)
+    const compatibleDonors = {
+      "A+": ["A+", "A-", "O+", "O-"],
+      "A-": ["A-", "O-"],
+      "B+": ["B+", "B-", "O+", "O-"],
+      "B-": ["B-", "O-"],
+      "AB+": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"], // Universal recipient
+      "AB-": ["A-", "B-", "AB-", "O-"],
+      "O+": ["O+", "O-"],
+      "O-": ["O-"], // Universal donor
+    };
+
+    const allowedTypes = compatibleDonors[bloodGroup];
+
+    if (!allowedTypes) {
+      return res.status(400).json({ message: `Invalid blood group: ${bloodGroup}` });
     }
+
+    // Find donors with compatible blood types
+    const donors = await Student.find({ bloodGroup: { $in: allowedTypes } });
+
+    if (donors.length === 0) {
+      return res.status(404).json({ message: `No compatible donors found for blood group ${bloodGroup}` });
+    }
+
     const requester = await User.findById(req.user._id);
     if (!requester) {
       return res.status(404).json({ message: "Requester not found" });
     }
+
     const requests = [];
     for (const donor of donors) {
       const request = new Request({
@@ -407,8 +425,13 @@ app.post("/api/request-blood", verifyToken, async (req, res) => {
           <p>Thank you for your support!</p>
         `,
       };
-      await transporter.sendMail(mailOptions);
+      try {
+        await transporter.sendMail(mailOptions);
+      } catch (emailError) {
+        console.error(`Failed to send blood request email to ${donor.email}:`, emailError);
+      }
     }
+
     res.json({ message: `Request sent to ${donors.length} donor(s) for ${bloodGroup}` });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
@@ -457,7 +480,7 @@ app.get("/api/reject-request/:requestId", async (req, res) => {
 app.get("/api/my-requests", verifyToken, async (req, res) => {
   try {
     const requests = await Request.find({ requester: req.user._id })
-      .populate("donor", "name email blood reisGroup")
+      .populate("donor", "name email bloodGroup")
       .sort({ createdAt: -1 });
     res.json(requests);
   } catch (error) {
