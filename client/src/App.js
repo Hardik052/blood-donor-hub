@@ -152,7 +152,7 @@ function Home() {
           <svg className="w-10 h-10 mr-3 text-red-600" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10 2c-1.5 0-3 1.5-4 3.5C5 7.5 3 10 3 12a7 7 0 0014 0c0-2-2-4.5-3-6.5-1-2-2.5-3.5-4-3.5z" />
           </svg>
-          Blood Donor Hub
+          Blood Management System
         </h1>
         <div className="mt-4 sm:mt-0 flex space-x-4">
           <button
@@ -252,7 +252,7 @@ function Home() {
                   </span>
                 </p>
                 <p className="text-gray-600 text-sm">
-                  <span className="font-medium">Trade:</span> {student.trade}
+                  <span className="font-medium">Branch:</span> {student.trade}
                 </p>
                 {userRole === "admin" && (
                   <div className="mt-5 flex space-x-3">

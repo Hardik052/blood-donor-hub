@@ -11,6 +11,13 @@ function AddStudent() {
   });
   const [error, setError] = useState("");
   const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+  const trades = [
+    "Mechanical Engineering", "Computer Science Engineering (CSE)", "Civil Engineering",
+    "Electrical Engineering", "Electronics and Communication Engineering (ECE)",
+    "Information Technology (IT)", "Bachelor of Computer Applications (BCA)",
+    "Master of Computer Applications (MCA)", "Artificial Intelligence & Data Science",
+    "Chemical Engineering"
+  ];
   const navigate = useNavigate();
 
   const handleInputChange = (event) => {
@@ -93,17 +100,22 @@ function AddStudent() {
           </div>
           <div>
             <label className="block text-lg font-semibold text-gray-800 mb-2">
-              Trade
+              Branch
             </label>
-            <input
-              type="text"
+            <select
               name="trade"
               value={formData.trade}
               onChange={handleInputChange}
-              placeholder="e.g., CSE, IT"
               className="input-select"
               required
-            />
+            >
+              <option value="">Select Branch</option>
+              {trades.map((trade) => (
+                <option key={trade} value={trade}>
+                  {trade}
+                </option>
+              ))}
+            </select>
           </div>
           {error && (
             <p className="alert bg-red-100 text-red-700 animate-fade-in">

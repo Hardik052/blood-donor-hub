@@ -19,7 +19,8 @@ const studentSchema = new mongoose.Schema({
     enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] // Restrict to valid blood groups
   },
   trade: { 
-    type: String, 
+    type: String,
+    enum: ["Mechanical Engineering", "Computer Science Engineering (CSE)", "Civil Engineering", "Electrical Engineering", "Electronics and Communication Engineering (ECE)", "Information Technology (IT)", "Bachelor of Computer Applications (BCA)", "Master of Computer Applications (MCA)", "Artificial Intelligence & Data Science", "Chemical Engineering"], default: "Mechanical Engineering", 
     required: true
 
   }

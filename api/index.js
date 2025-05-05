@@ -165,6 +165,38 @@ app.post("/api/add-admin", verifyToken, restrictToAdmin, async (req, res) => {
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists" });
     }
+
+    // Prepare confirmation email
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Welcome to Blood Donor App - Admin Account Created",
+      html: `
+        <p>Dear Admin,</p>
+        <p>Congratulations! Your admin account for the Blood Donor App has been successfully created.</p>
+        <p><strong>Details:</strong></p>
+        <ul>
+          <li><strong>Email:</strong> ${email}</li>
+          <li><strong>Role:</strong> Admin</li>
+        </ul>
+        <p>Please keep your credentials secure and use them to log in to the admin panel.</p>
+        <p>Best regards,<br>Blood Donor App Team</p>
+      `,
+    };
+
+    // Attempt to send confirmation email first
+    try {
+      await transporter.sendMail(mailOptions);
+    } catch (emailError) {
+      // Check if the error indicates an invalid email address
+      if (emailError.responseCode === 550 || emailError.message.includes("recipient rejected")) {
+        return res.status(400).json({ message: "Email does not exist" });
+      }
+      console.error("Failed to send confirmation email:", emailError);
+      return res.status(500).json({ message: "Failed to send confirmation email", error: emailError.message });
+    }
+
+    // If email is sent successfully, create the admin
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({
       email,
@@ -173,7 +205,8 @@ app.post("/api/add-admin", verifyToken, restrictToAdmin, async (req, res) => {
       isVerified: true,
     });
     await user.save();
-    res.status(201).json({ message: "Admin created successfully" });
+
+    res.status(201).json({ message: "Admin created successfully and confirmation email sent" });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
@@ -229,7 +262,6 @@ app.get("/api/bloodgroup/:bloodGroup", verifyToken, async (req, res) => {
   }
 });
 
-
 app.get("/api/students/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -247,13 +279,51 @@ app.post("/api/students", verifyToken, restrictToAdmin, async (req, res) => {
     if (!name || !email || !bloodGroup || !trade) {
       return res.status(400).json({ message: "All fields are required" });
     }
+
+    // Check for duplicate email in Student collection
+    const existingStudent = await Student.findOne({ email });
+    if (existingStudent) {
+      return res.status(400).json({ message: "Email already exists in student records" });
+    }
+
+    // Prepare confirmation email
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Welcome to Blood Management System",
+      html: `
+        <p>Dear ${name},</p>
+        <p>Congratulations! You have been successfully added to the Blood Management System as a donor.</p>
+        <p><strong>Details:</strong></p>
+        <ul>
+          <li><strong>Name:</strong> ${name}</li>
+          <li><strong>Email:</strong> ${email}</li>
+          <li><strong>Blood Group:</strong> ${bloodGroup}</li>
+          <li><strong>Branch:</strong> ${trade}</li>
+        </ul>
+        <p>Thank you for joining our community of lifesavers!</p>
+        <p>Best regards,<br>Blood Donor App Team</p>
+      `,
+    };
+
+    // Attempt to send confirmation email first
+    try {
+      await transporter.sendMail(mailOptions);
+    } catch (emailError) {
+      // Check if the error indicates an invalid email address
+      if (emailError.responseCode === 550 || emailError.message.includes("recipient rejected")) {
+        return res.status(400).json({ message: "Email does not exist" });
+      }
+      console.error("Failed to send confirmation email:", emailError);
+      return res.status(500).json({ message: "Failed to send confirmation email", error: emailError.message });
+    }
+
+    // If email is sent successfully, save the student
     const newStudent = new Student({ name, email, bloodGroup, trade });
     await newStudent.save();
-    res.status(201).json(newStudent);
+
+    res.status(201).json({ message: "Student added successfully and confirmation email sent", student: newStudent });
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ message: "Email already exists" });
-    }
     res.status(500).json({ message: "Server error", error });
   }
 });
@@ -295,7 +365,7 @@ app.delete("/api/students/:id", verifyToken, restrictToAdmin, async (req, res) =
   }
 });
 
-// New Route: Request Blood
+// Request Blood Route
 app.post("/api/request-blood", verifyToken, async (req, res) => {
   try {
     const { bloodGroup } = req.body;
@@ -345,7 +415,7 @@ app.post("/api/request-blood", verifyToken, async (req, res) => {
   }
 });
 
-// New Route: Accept Request
+// Accept Request Route
 app.get("/api/accept-request/:requestId", async (req, res) => {
   try {
     const { requestId } = req.params;
@@ -364,7 +434,7 @@ app.get("/api/accept-request/:requestId", async (req, res) => {
   }
 });
 
-// New Route: Reject Request
+// Reject Request Route
 app.get("/api/reject-request/:requestId", async (req, res) => {
   try {
     const { requestId } = req.params;
@@ -383,11 +453,11 @@ app.get("/api/reject-request/:requestId", async (req, res) => {
   }
 });
 
-// New Route: Get My Requests
+// Get My Requests Route
 app.get("/api/my-requests", verifyToken, async (req, res) => {
   try {
     const requests = await Request.find({ requester: req.user._id })
-      .populate("donor", "name email bloodGroup")
+      .populate("donor", "name email blood reisGroup")
       .sort({ createdAt: -1 });
     res.json(requests);
   } catch (error) {
